@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { GraduationCap, Sparkles, Briefcase } from "lucide-react";
+import { GraduationCap, Sparkles, Briefcase, AlertCircle } from "lucide-react";
 import StageShell from "./shared/StageShell.jsx";
 
 const OPTIONS = [
@@ -26,12 +26,12 @@ const OPTIONS = [
   },
 ];
 
-export default function PersonaStep({ onChoose }) {
+export default function PersonaStep({ onChoose, error }) {
   return (
     <StageShell
-      eyebrow="Stage 01, Calibration"
+      eyebrow="Stage 03, Calibration"
       title="Where are you, right now?"
-      subtitle="This decides how the engine reads everything else. A summer intern and a ten-year engineer need different questions asked of the same resume."
+      subtitle="This decides what we ask you next: whether to look for room to grow in your current lane, or skip straight to mapping a jump into something new."
     >
       <div className="grid w-full max-w-4xl grid-cols-1 gap-5 sm:grid-cols-3">
         {OPTIONS.map((opt, i) => (
@@ -54,6 +54,12 @@ export default function PersonaStep({ onChoose }) {
           </motion.button>
         ))}
       </div>
+
+      {error && (
+        <div className="mt-6 flex items-center gap-2 text-sm text-signal-rose">
+          <AlertCircle className="h-4 w-4" /> {error}
+        </div>
+      )}
     </StageShell>
   );
 }

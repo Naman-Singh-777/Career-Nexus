@@ -3,8 +3,9 @@ import { analyzeResume, generateBlueprints, generateRoadmap } from "../api.js";
 
 export const STAGES = {
   HERO: "hero",
-  PERSONA: "persona",
   RESUME: "resume",
+  ATS: "ats",
+  PERSONA: "persona",
   DIRECTION: "direction",
   SYNTHESIS: "synthesis",
   BOARD: "board",
@@ -13,8 +14,9 @@ export const STAGES = {
 
 const ORDER = [
   STAGES.HERO,
-  STAGES.PERSONA,
   STAGES.RESUME,
+  STAGES.ATS,
+  STAGES.PERSONA,
   STAGES.DIRECTION,
   STAGES.SYNTHESIS,
   STAGES.BOARD,
@@ -39,36 +41,25 @@ export function useJourney() {
     if (i > 0) setStage(ORDER[i - 1]);
   }, [stage]);
 
-  const choosePersona = useCallback((p) => {
-    setPersona(p);
-    setStage(STAGES.RESUME);
+  // Resume goes first now: we parse the document and score it on its own
+  // terms before asking anything about the person's situation.
+  const submitResume = useCallback(async (file) => {
+    setError(null);
+    setStage(STAGES.SYNTHESIS);
+    setSynthesisLabel("Parsing trajectory signal");
+    try {
+      const { profile: p } = await analyzeResume(file);
+      setProfile(p);
+      setStage(STAGES.ATS);
+    } catch (e) {
+      setError(e.message);
+      setStage(STAGES.RESUME);
+    }
   }, []);
 
-  const submitResume = useCallback(
-    async (file) => {
-      setError(null);
-      setStage(STAGES.SYNTHESIS);
-      setSynthesisLabel("Parsing trajectory signal");
-      try {
-        const { profile: p } = await analyzeResume(file, persona);
-        setProfile(p);
-        // Students and freshers have no "same role" to stay in, so we skip straight to
-        // "transition" instead of asking a direction question that doesn't apply to them.
-        if (persona === "student" || persona === "fresher") {
-          setDirection("transition");
-          await runSynthesis(p, "transition");
-        } else {
-          setStage(STAGES.DIRECTION);
-        }
-      } catch (e) {
-        setError(e.message);
-        setStage(STAGES.RESUME);
-      }
-    },
-    [persona]
-  );
+  const continueFromAts = useCallback(() => setStage(STAGES.PERSONA), []);
 
-  const runSynthesis = useCallback(async (p, dir) => {
+  const runSynthesis = useCallback(async (p, dir, fallbackStage = STAGES.DIRECTION) => {
     setError(null);
     setStage(STAGES.SYNTHESIS);
     setSynthesisLabel(
@@ -81,14 +72,29 @@ export function useJourney() {
       setStage(STAGES.BOARD);
     } catch (e) {
       setError(e.message);
-      setStage(STAGES.DIRECTION);
+      setStage(fallbackStage);
     }
   }, []);
+
+  const choosePersona = useCallback(
+    (p) => {
+      setPersona(p);
+      // Students and freshers have no "same role" to stay in, so we skip straight to
+      // "transition" instead of asking a direction question that doesn't apply to them.
+      if (p === "student" || p === "fresher") {
+        setDirection("transition");
+        runSynthesis(profile, "transition", STAGES.PERSONA);
+      } else {
+        setStage(STAGES.DIRECTION);
+      }
+    },
+    [profile, runSynthesis]
+  );
 
   const chooseDirection = useCallback(
     async (dir) => {
       setDirection(dir);
-      await runSynthesis(profile, dir);
+      await runSynthesis(profile, dir, STAGES.DIRECTION);
     },
     [profile, runSynthesis]
   );
@@ -136,8 +142,9 @@ export function useJourney() {
     synthesisLabel,
     goTo,
     back,
-    choosePersona,
     submitResume,
+    continueFromAts,
+    choosePersona,
     chooseDirection,
     chooseBlueprint,
     restart,

@@ -6,10 +6,9 @@ async function handle(res) {
   return res.json();
 }
 
-export async function analyzeResume(file, persona) {
+export async function analyzeResume(file) {
   const form = new FormData();
   form.append("resume", file);
-  form.append("persona", persona);
   const res = await fetch("/api/resume", { method: "POST", body: form });
   return handle(res);
 }
