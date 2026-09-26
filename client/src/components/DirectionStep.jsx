@@ -1,8 +1,8 @@
 import { motion } from "framer-motion";
-import { Compass, TrendingUp } from "lucide-react";
+import { Compass, TrendingUp, AlertCircle } from "lucide-react";
 import StageShell from "./shared/StageShell.jsx";
 
-export default function DirectionStep({ profile, onChoose }) {
+export default function DirectionStep({ profile, onChoose, error }) {
   return (
     <StageShell
       eyebrow="Stage 03, Direction"
@@ -36,6 +36,12 @@ export default function DirectionStep({ profile, onChoose }) {
           </p>
         </motion.button>
       </div>
+
+      {error && (
+        <div className="mt-6 flex items-center gap-2 text-sm text-signal-rose">
+          <AlertCircle className="h-4 w-4" /> {error}
+        </div>
+      )}
     </StageShell>
   );
 }
