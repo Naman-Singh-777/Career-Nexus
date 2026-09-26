@@ -28,7 +28,7 @@ export default function App() {
         )}
 
         {j.stage === STAGES.DIRECTION && (
-          <DirectionStep key="direction" profile={j.profile} onChoose={j.chooseDirection} />
+          <DirectionStep key="direction" profile={j.profile} onChoose={j.chooseDirection} error={j.error} />
         )}
 
         {j.stage === STAGES.SYNTHESIS && <SynthesisLoader key="synthesis" label={j.synthesisLabel} />}
