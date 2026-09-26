@@ -7,7 +7,7 @@ const STAGE_ACCENTS = ["#5fd4d6", "#8b7cf6", "#f2a65a", "#e8618c"];
 export default function RoadmapView({ roadmap, onRestart }) {
   return (
     <StageShell
-      eyebrow="Stage 05, Learning Pathway"
+      eyebrow="Stage 06, Learning Pathway"
       title={roadmap.careerTitle}
       subtitle={roadmap.overview}
       wide

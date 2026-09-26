@@ -16,7 +16,7 @@ export default function ResumeStep({ onSubmit, error }) {
 
   return (
     <StageShell
-      eyebrow="Stage 02, Signal Intake"
+      eyebrow="Stage 01, Signal Intake"
       title="Upload your resume."
       subtitle="Gemini reads it the way a mentor would: explicit skills, and the ones implied by what you actually did."
     >

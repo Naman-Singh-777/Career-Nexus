@@ -54,6 +54,28 @@ export const PROFILE_SCHEMA = {
     },
     strengths: { type: "ARRAY", items: { type: "STRING" } },
     gaps: { type: "ARRAY", items: { type: "STRING" } },
+    atsScore: {
+      type: "OBJECT",
+      description:
+        "A read of the resume as a document: how cleanly a typical applicant tracking " +
+        "system would parse and rank it. This is not a match against any specific job.",
+      properties: {
+        overall: { type: "NUMBER", description: "0-100" },
+        factors: {
+          type: "ARRAY",
+          items: {
+            type: "OBJECT",
+            properties: {
+              name: { type: "STRING" },
+              score: { type: "NUMBER", description: "0-100" },
+              note: { type: "STRING" },
+            },
+            required: ["name", "score"],
+          },
+        },
+      },
+      required: ["overall", "factors"],
+    },
   },
   required: ["name", "careerStage", "summary", "skills"],
 };

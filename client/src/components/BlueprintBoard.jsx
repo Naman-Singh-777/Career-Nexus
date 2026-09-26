@@ -110,7 +110,7 @@ export default function BlueprintBoard({ blueprints, sources, onChoose }) {
 
   return (
     <StageShell
-      eyebrow="Stage 04, Creative Blueprint Board"
+      eyebrow="Stage 05, Creative Blueprint Board"
       title="Three paths, grounded in what's actually hiring right now."
       subtitle="Every score below comes from live research on this exact profile, not a generic ranking."
       wide

@@ -22,12 +22,18 @@ just skills explicitly listed, and produce a precise, honest structured profile.
 Estimate proficiency (0-100) conservatively from evidence in the document.
 Do not invent employers, dates, or credentials that are not present or
 reasonably implied. If information is missing, omit it rather than guessing
-wildly.`;
+wildly. Infer careerStage from the evidence itself: graduation dates, whether
+any role is full-time versus an internship, and total years of experience.
+
+You also produce an ATS compatibility read of the document itself: how a
+typical applicant tracking system would parse and rank this exact file, not
+a match against any specific job posting. Score keyword clarity, section
+structure, quantified impact, and formatting risk (tables, columns, or images
+that confuse parsers), each 0 to 100 with a short note, plus one overall score.`;
 
 router.post("/", upload.single("resume"), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: "No resume file uploaded." });
-    const persona = req.body.persona || "unspecified";
 
     const base64 = req.file.buffer.toString("base64");
 
@@ -38,10 +44,8 @@ router.post("/", upload.single("resume"), async (req, res) => {
       thinking: "HIGH",
       parts: [
         textPart(
-          `The person identifies as: "${persona}". Parse the attached resume PDF into the ` +
-            `structured profile schema. Infer careerStage from persona + evidence in the ` +
-            `document (a "student"/"fresher" persona with no full-time roles should map to ` +
-            `careerStage "student" or "fresher" even if internships are present).`
+          "Parse the attached resume PDF into the structured profile schema, including " +
+            "the ATS compatibility read."
         ),
         pdfPart(base64),
       ],

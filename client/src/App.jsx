@@ -2,8 +2,9 @@ import { AnimatePresence } from "framer-motion";
 import ParticleField from "./components/ParticleField.jsx";
 import GrainOverlay from "./components/GrainOverlay.jsx";
 import Hero from "./components/Hero.jsx";
-import PersonaStep from "./components/PersonaStep.jsx";
 import ResumeStep from "./components/ResumeStep.jsx";
+import AtsScoreStep from "./components/AtsScoreStep.jsx";
+import PersonaStep from "./components/PersonaStep.jsx";
 import DirectionStep from "./components/DirectionStep.jsx";
 import SynthesisLoader from "./components/SynthesisLoader.jsx";
 import BlueprintBoard from "./components/BlueprintBoard.jsx";
@@ -19,12 +20,18 @@ export default function App() {
       <GrainOverlay />
 
       <AnimatePresence mode="wait">
-        {j.stage === STAGES.HERO && <Hero key="hero" onBegin={() => j.goTo(STAGES.PERSONA)} />}
-
-        {j.stage === STAGES.PERSONA && <PersonaStep key="persona" onChoose={j.choosePersona} />}
+        {j.stage === STAGES.HERO && <Hero key="hero" onBegin={() => j.goTo(STAGES.RESUME)} />}
 
         {j.stage === STAGES.RESUME && (
           <ResumeStep key="resume" error={j.error} onSubmit={j.submitResume} />
+        )}
+
+        {j.stage === STAGES.ATS && (
+          <AtsScoreStep key="ats" profile={j.profile} onContinue={j.continueFromAts} />
+        )}
+
+        {j.stage === STAGES.PERSONA && (
+          <PersonaStep key="persona" onChoose={j.choosePersona} error={j.error} />
         )}
 
         {j.stage === STAGES.DIRECTION && (

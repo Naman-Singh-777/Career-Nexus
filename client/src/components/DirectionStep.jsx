@@ -5,7 +5,7 @@ import StageShell from "./shared/StageShell.jsx";
 export default function DirectionStep({ profile, onChoose, error }) {
   return (
     <StageShell
-      eyebrow="Stage 03, Direction"
+      eyebrow="Stage 04, Direction"
       title={`We've read your background${profile?.currentRole ? ` in ${profile.currentRole}` : ""}.`}
       subtitle="Same profile, two very different engines. Which question should we answer?"
     >
