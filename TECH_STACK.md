@@ -4,8 +4,10 @@ This is what the app is actually built on: an Express API and a React single-pag
 
 ```
 career-nexus/
-├── server/    Express API. Holds the Gemini key, never sent to the browser.
-└── client/    React, Vite, Tailwind, and Framer Motion frontend.
+├── server/                        Express API. Holds the Gemini key, never sent to the browser.
+├── client/                        React, Vite, Tailwind, and Framer Motion frontend.
+├── render.yaml                    Backend deploy config for Render.
+└── .github/workflows/             Frontend deploy workflow for GitHub Pages.
 ```
 
 ## Backend
@@ -46,9 +48,18 @@ The two charts on the blueprint board, the skill radar and the compatibility bar
 - Google Search grounding (`tools: [{ googleSearch: {} }]`) on the career-blueprint research step, so salary ranges and demand signals come from live search results rather than being invented
 - YouTube links are generated search URLs (`youtube.com/results?search_query=...`, built with `encodeURIComponent`), never a fabricated video title or ID
 
+## Hosting
+
+The app can run in production two different ways, and the code supports both without changes:
+
+- **Single process** (`npm start`): Express builds and serves the React app itself, API and frontend on one origin, one port. This is what running it locally in production mode does.
+- **Split hosting** (the live deployment): the frontend and backend deploy separately, each redeploying on push to `main`.
+  - The frontend builds with Vite and deploys to **GitHub Pages** through a GitHub Actions workflow (`.github/workflows/deploy-pages.yml`). Two build-time variables control this: `VITE_BASE_PATH`, so asset URLs resolve under a project-site path like `/Career-Nexus/`, and `VITE_API_BASE_URL`, so `client/src/api.js` calls the Render URL instead of a relative path. Neither is set for a normal local build, so nothing changes there.
+  - The backend deploys to **Render** as its own web service, defined in `render.yaml` at the repo root so Render can build it straight from the repo without manual setup. `GEMINI_API_KEY` lives only in Render's environment, never in git.
+  - `ALLOWED_ORIGIN` on the server restricts CORS to the GitHub Pages origin once it is set; unset, the API stays open to any origin, which is what local dev needs.
+
 ## Tooling and running it
 
 - An npm workspaces-style monorepo: root, `server/`, `client/`, with a `postinstall` hook that cascades `npm install` into both
 - `concurrently` to run the Express dev server and the Vite dev server together with one command
-- Production mode builds the client to static files and serves them from the same Express process as the API, one origin, one port
 - Source is on GitHub at `Naman-Singh-777/Career-Nexus`
