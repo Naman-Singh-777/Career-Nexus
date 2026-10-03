@@ -11,7 +11,11 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const CLIENT_DIST = path.join(__dirname, "..", "..", "client", "dist");
 
 const app = express();
-app.use(cors());
+// Wide open by default so local dev and the single-process mode keep working
+// unchanged. Set ALLOWED_ORIGIN (e.g. the GitHub Pages URL) once the frontend
+// is hosted separately, so the API only answers that origin.
+const allowedOrigin = process.env.ALLOWED_ORIGIN;
+app.use(cors(allowedOrigin ? { origin: allowedOrigin } : undefined));
 app.use(express.json({ limit: "2mb" }));
 
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
