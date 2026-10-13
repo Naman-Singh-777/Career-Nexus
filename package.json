@@ -1,0 +1,16 @@
+{
+  "name": "career-nexus",
+  "private": true,
+  "version": "2.0.0",
+  "description": "Career Nexus, a Gemini-powered career trajectory engine",
+  "scripts": {
+    "install:all": "npm install --prefix server && npm install --prefix client",
+    "postinstall": "npm run install:all",
+    "dev": "concurrently -k -n SERVER,CLIENT -c blue,magenta \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
+    "build": "npm run build --prefix client",
+    "start": "npm run build && npm run start --prefix server"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  }
+}
