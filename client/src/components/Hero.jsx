@@ -48,15 +48,6 @@ export default function Hero({ onBegin }) {
         Begin the scan
         <ArrowUpRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
       </motion.button>
-
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 1.4, delay: 1 }}
-        className="pointer-events-none absolute bottom-10 left-1/2 -translate-x-1/2 font-mono-metric text-[11px] tracking-[0.3em] text-ink-dim/60"
-      >
-        SCROLL / CLICK TO INITIATE
-      </motion.div>
     </div>
   );
 }
