@@ -1,5 +1,12 @@
 import { Router } from "express";
-import { MODELS, generateStructured, generateContent, friendlyErrorMessage, textPart } from "../gemini.js";
+import {
+  MODELS,
+  generateStructured,
+  generateContent,
+  friendlyErrorMessage,
+  isQuotaExhaustedError,
+  textPart,
+} from "../gemini.js";
 import { BLUEPRINTS_SCHEMA } from "../schemas.js";
 
 const router = Router();
@@ -12,6 +19,19 @@ candidate-relevant role: typical required skills seen in current job
 postings, approximate salary ranges you found, and demand/growth signals.
 Cite what you find in prose (you do not need a References section, inline
 mentions are fine). Be specific and current; do not pad with generic advice.`;
+
+// Google Search grounding carries its own, much smaller free-tier quota
+// than plain text generation, independent of which model backs it. When
+// that quota is exhausted this drops the googleSearch tool and asks the
+// model to reason from its own training knowledge instead, so the request
+// still completes (without live job-market data) rather than hard-failing.
+const UNGROUNDED_RESEARCH_SYSTEM = `You are a labor-market research analyst. Live web search is unavailable right
+now, so answer from your own knowledge instead. Given a candidate profile,
+write a concise, factual research brief (plain text, not JSON) covering, per
+candidate-relevant role: typical required skills, approximate salary ranges,
+and demand/growth signals, to the best of your knowledge. Say plainly where
+your knowledge may be dated rather than inventing precise figures. Be
+specific; do not pad with generic advice.`;
 
 const BLUEPRINT_SYSTEM = `You are a principal career architect delivering an inspiring, deeply
 analytical career blueprint board. You are given (a) a structured candidate
@@ -46,24 +66,41 @@ router.post("/", async (req, res) => {
         `seniority tracks for this exact role today, with real current requirements, salary ` +
         `ranges, and demand signals.`;
 
-    const researchResponse = await generateContent({
-      model: MODELS.REASONING,
-      contents: [{ role: "user", parts: [{ text: researchPrompt }] }],
-      config: {
-        systemInstruction: GROUNDED_RESEARCH_SYSTEM,
-        tools: [{ googleSearch: {} }],
-        thinkingConfig: { thinkingLevel: "HIGH" },
-      },
-    });
+    let researchResponse;
+    let grounded = true;
+    try {
+      researchResponse = await generateContent({
+        model: MODELS.REASONING,
+        contents: [{ role: "user", parts: [{ text: researchPrompt }] }],
+        config: {
+          systemInstruction: GROUNDED_RESEARCH_SYSTEM,
+          tools: [{ googleSearch: {} }],
+          thinkingConfig: { thinkingLevel: "HIGH" },
+        },
+      });
+    } catch (err) {
+      if (!isQuotaExhaustedError(err)) throw err;
+      console.warn("[careers] Google Search grounding quota exhausted, falling back to ungrounded research");
+      grounded = false;
+      researchResponse = await generateContent({
+        model: MODELS.REASONING,
+        contents: [{ role: "user", parts: [{ text: researchPrompt }] }],
+        config: {
+          systemInstruction: UNGROUNDED_RESEARCH_SYSTEM,
+          thinkingConfig: { thinkingLevel: "HIGH" },
+        },
+      });
+    }
 
     const researchBrief =
       researchResponse.text ??
       researchResponse.candidates?.[0]?.content?.parts?.map((p) => p.text).join("") ??
       "";
-    const sources =
-      researchResponse.candidates?.[0]?.groundingMetadata?.groundingChunks
-        ?.map((c) => c.web)
-        .filter(Boolean) ?? [];
+    const sources = grounded
+      ? researchResponse.candidates?.[0]?.groundingMetadata?.groundingChunks
+          ?.map((c) => c.web)
+          .filter(Boolean) ?? []
+      : [];
 
     // Step 2: turn the grounded brief into the strict UI schema.
     const { data } = await generateStructured({
@@ -83,7 +120,7 @@ router.post("/", async (req, res) => {
       ],
     });
 
-    res.json({ blueprints: data.blueprints, sources });
+    res.json({ blueprints: data.blueprints, sources, grounded });
   } catch (err) {
     console.error("[careers]", err);
     res.status(500).json({ error: friendlyErrorMessage(err) });

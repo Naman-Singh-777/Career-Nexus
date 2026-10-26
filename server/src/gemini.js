@@ -83,6 +83,18 @@ async function withRetry(fn, { retries = 2, baseDelayMs = 1000 } = {}) {
 }
 
 /**
+ * True for a hard quota/rate-limit rejection (429 / RESOURCE_EXHAUSTED).
+ * Google Search grounding has its own, much smaller free-tier quota than
+ * plain text generation, so this is what careers.js checks to decide
+ * whether to fall back to an ungrounded research pass rather than failing
+ * the whole request outright.
+ */
+export function isQuotaExhaustedError(err) {
+  const { httpStatus, apiStatus } = extractGeminiErrorInfo(err);
+  return apiStatus === "RESOURCE_EXHAUSTED" || httpStatus === 429;
+}
+
+/**
  * Turns any error from a Gemini call into something safe to show a user,
  * instead of the raw API error body (which can be a JSON blob with internal
  * status codes). Routes should use this in their catch blocks rather than
