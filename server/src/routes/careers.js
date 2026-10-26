@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { ai, MODELS, generateStructured, textPart } from "../gemini.js";
+import { MODELS, generateStructured, generateContent, friendlyErrorMessage, textPart } from "../gemini.js";
 import { BLUEPRINTS_SCHEMA } from "../schemas.js";
 
 const router = Router();
@@ -46,7 +46,7 @@ router.post("/", async (req, res) => {
         `seniority tracks for this exact role today, with real current requirements, salary ` +
         `ranges, and demand signals.`;
 
-    const researchResponse = await ai.models.generateContent({
+    const researchResponse = await generateContent({
       model: MODELS.REASONING,
       contents: [{ role: "user", parts: [{ text: researchPrompt }] }],
       config: {
@@ -86,7 +86,7 @@ router.post("/", async (req, res) => {
     res.json({ blueprints: data.blueprints, sources });
   } catch (err) {
     console.error("[careers]", err);
-    res.status(500).json({ error: err.message || "Failed to generate career blueprints." });
+    res.status(500).json({ error: friendlyErrorMessage(err) });
   }
 });
 

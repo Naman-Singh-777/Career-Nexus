@@ -3,7 +3,7 @@ import { Router } from "express";
 import multer from "multer";
 import mammoth from "mammoth";
 import WordExtractor from "word-extractor";
-import { generateStructured, MODELS, textPart, pdfPart } from "../gemini.js";
+import { generateStructured, MODELS, textPart, pdfPart, friendlyErrorMessage } from "../gemini.js";
 import { PROFILE_SCHEMA } from "../schemas.js";
 
 // Browsers are inconsistent about what mimetype they report for .doc and
@@ -103,7 +103,7 @@ router.post("/", upload.single("resume"), async (req, res) => {
     res.json({ profile: data });
   } catch (err) {
     console.error("[resume]", err);
-    res.status(500).json({ error: err.message || "Failed to analyze resume." });
+    res.status(500).json({ error: friendlyErrorMessage(err) });
   }
 });
 

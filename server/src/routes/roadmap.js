@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { MODELS, generateStructured, textPart } from "../gemini.js";
+import { MODELS, generateStructured, textPart, friendlyErrorMessage } from "../gemini.js";
 import { ROADMAP_SCHEMA } from "../schemas.js";
 import { buildYoutubeSearchUrl } from "../youtube.js";
 
@@ -49,7 +49,7 @@ router.post("/", async (req, res) => {
     res.json({ ...data, stages });
   } catch (err) {
     console.error("[roadmap]", err);
-    res.status(500).json({ error: err.message || "Failed to generate roadmap." });
+    res.status(500).json({ error: friendlyErrorMessage(err) });
   }
 });
 

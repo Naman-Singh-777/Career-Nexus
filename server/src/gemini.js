@@ -18,6 +18,109 @@ export const MODELS = {
 };
 
 /**
+ * The SDK throws errors whose `.message` is often the raw JSON error body
+ * from the API itself, e.g.
+ *   '{"error":{"code":503,"message":"The model is overloaded...","status":"UNAVAILABLE"}}'
+ * This pulls the real HTTP status, API status string, and human message out
+ * of that (or out of `.status`/`.message` directly, if the SDK already
+ * parsed it), so retry logic and user-facing errors never have to deal with
+ * raw JSON text.
+ */
+function extractGeminiErrorInfo(err) {
+  let httpStatus = typeof err?.status === "number" ? err.status : undefined;
+  let apiStatus;
+  let message = err?.message;
+
+  if (typeof message === "string") {
+    const trimmed = message.trim();
+    if (trimmed.startsWith("{")) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        const inner = parsed.error ?? parsed;
+        if (typeof inner.code === "number") httpStatus = httpStatus ?? inner.code;
+        if (typeof inner.status === "string") apiStatus = inner.status;
+        if (typeof inner.message === "string") message = inner.message;
+      } catch {
+        // Wasn't actually JSON, leave message as-is.
+      }
+    }
+  }
+
+  return { httpStatus, apiStatus, message };
+}
+
+const TRANSIENT_HTTP_STATUSES = new Set([429, 500, 503, 504]);
+const TRANSIENT_API_STATUSES = new Set(["UNAVAILABLE", "RESOURCE_EXHAUSTED", "INTERNAL", "DEADLINE_EXCEEDED"]);
+
+function isTransientGeminiError(err) {
+  const { httpStatus, apiStatus } = extractGeminiErrorInfo(err);
+  return TRANSIENT_HTTP_STATUSES.has(httpStatus) || TRANSIENT_API_STATUSES.has(apiStatus);
+}
+
+/**
+ * Retries a transient Gemini failure (overload, rate limit, internal error)
+ * with exponential backoff and jitter. Anything non-transient (bad request,
+ * auth, safety block) rethrows immediately on the first try.
+ */
+async function withRetry(fn, { retries = 2, baseDelayMs = 1000 } = {}) {
+  let lastErr;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastErr = err;
+      if (attempt === retries || !isTransientGeminiError(err)) throw err;
+      const delay = Math.round(baseDelayMs * 2 ** attempt + Math.random() * 300);
+      const { httpStatus, apiStatus } = extractGeminiErrorInfo(err);
+      console.warn(
+        `[gemini] transient error (${apiStatus || httpStatus || "unknown"}), retrying in ${delay}ms ` +
+          `(attempt ${attempt + 1}/${retries})`
+      );
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
+  }
+  throw lastErr;
+}
+
+/**
+ * Turns any error from a Gemini call into something safe to show a user,
+ * instead of the raw API error body (which can be a JSON blob with internal
+ * status codes). Routes should use this in their catch blocks rather than
+ * `err.message` directly.
+ */
+export function friendlyErrorMessage(err) {
+  const { httpStatus, apiStatus, message } = extractGeminiErrorInfo(err);
+
+  if (apiStatus === "UNAVAILABLE" || httpStatus === 503) {
+    return "Gemini is overloaded right now. Please wait a few seconds and try again.";
+  }
+  if (apiStatus === "RESOURCE_EXHAUSTED" || httpStatus === 429) {
+    return "We've hit Gemini's rate limit. Please wait a moment and try again.";
+  }
+  if (apiStatus === "DEADLINE_EXCEEDED" || httpStatus === 504) {
+    return "Gemini took too long to respond. Please try again.";
+  }
+  if (apiStatus === "INTERNAL" || httpStatus === 500) {
+    return "Gemini hit a temporary internal error. Please try again.";
+  }
+  // A plain, non-JSON message from the SDK is usually already readable
+  // (e.g. our own extraction/validation errors); pass it through. Otherwise
+  // don't risk leaking a raw error body to the client.
+  if (message && !message.trim().startsWith("{")) return message;
+  return "Something went wrong talking to Gemini. Please try again.";
+}
+
+/**
+ * Thin, retrying wrapper around `ai.models.generateContent`. Every Gemini
+ * call in the app (structured or grounded) should go through this instead
+ * of calling `ai.models.generateContent` directly, so transient overload
+ * and rate-limit errors get a few automatic retries before surfacing.
+ */
+export async function generateContent(params) {
+  return withRetry(() => ai.models.generateContent(params));
+}
+
+/**
  * Strips ```json ... ``` fences some models still wrap around structured
  * output, and recovers the first top-level {...} or [...] block if the
  * model added stray prose despite the schema. Defensive parsing so a
@@ -79,7 +182,7 @@ export async function generateStructured({
     config.responseSchema = schema;
   }
 
-  const response = await ai.models.generateContent({
+  const response = await generateContent({
     model,
     contents: [{ role: "user", parts }],
     config,
