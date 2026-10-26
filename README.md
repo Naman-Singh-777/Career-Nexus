@@ -48,7 +48,7 @@ Open **http://localhost:8787**. Single origin, single process.
 
 | Step | Model | Why |
 |---|---|---|
-| Resume to structured profile (`server/src/routes/resume.js`) | `gemini-3.1-pro-preview` (`GEMINI_MODEL_REASONING`) | Needs real document understanding (the PDF is sent as `inlineData`) plus judgment about implicit skills. A cheaper model tends to under-read resumes. |
+| Resume to structured profile (`server/src/routes/resume.js`) | `gemini-3.1-pro-preview` (`GEMINI_MODEL_REASONING`) | Needs real document understanding plus judgment about implicit skills. A PDF resume is sent straight in as `inlineData`; a DOCX or DOC resume gets its text pulled out server-side first, since Gemini has no native reader for those. A cheaper model tends to under-read resumes either way. |
 | Career blueprints (`routes/careers.js`) | same model, with Google Search grounding | Two steps. First, a grounded research pass (`tools: [{ googleSearch: {} }]`) pulls real current job-posting and salary signal. Then a second, schema-constrained pass turns that research into the strict JSON the UI renders. Scores and salary ranges come from the research step, not invention. |
 | Learning roadmap (`routes/roadmap.js`) | `gemini-3.5-flash-lite` (`GEMINI_MODEL_FAST`) | Structuring an ordered topic list is a formatting task, not a reasoning task, so a cheap, fast model is enough. |
 

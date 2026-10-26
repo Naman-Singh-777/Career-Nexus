@@ -3,14 +3,29 @@ import { motion } from "framer-motion";
 import { FileUp, FileText, AlertCircle } from "lucide-react";
 import StageShell from "./shared/StageShell.jsx";
 
+// Matched against the file name since browsers are inconsistent about what
+// they report in f.type for anything that isn't a PDF, DOC and TXT in
+// particular often come through as a generic application/octet-stream.
+const ACCEPTED_EXTENSIONS = [".pdf", ".docx", ".doc", ".txt"];
+
+function hasAcceptedExtension(name) {
+  const lower = (name || "").toLowerCase();
+  return ACCEPTED_EXTENSIONS.some((ext) => lower.endsWith(ext));
+}
+
 export default function ResumeStep({ onSubmit, error }) {
   const [file, setFile] = useState(null);
   const [dragOver, setDragOver] = useState(false);
+  const [rejected, setRejected] = useState(false);
   const inputRef = useRef(null);
 
   const accept = useCallback((f) => {
     if (!f) return;
-    if (f.type !== "application/pdf") return;
+    if (!hasAcceptedExtension(f.name)) {
+      setRejected(true);
+      return;
+    }
+    setRejected(false);
     setFile(f);
   }, []);
 
@@ -39,7 +54,7 @@ export default function ResumeStep({ onSubmit, error }) {
         <input
           ref={inputRef}
           type="file"
-          accept="application/pdf"
+          accept=".pdf,.docx,.doc,.txt,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/msword,text/plain"
           className="hidden"
           onChange={(e) => accept(e.target.files?.[0])}
         />
@@ -52,11 +67,17 @@ export default function ResumeStep({ onSubmit, error }) {
         ) : (
           <>
             <FileUp className="h-8 w-8 text-ink-dim" strokeWidth={1.5} />
-            <div className="font-display text-md">Drop your PDF here</div>
-            <div className="text-xs text-ink-dim">or click to browse, PDF only, up to 12MB</div>
+            <div className="font-display text-md">Drop your resume here</div>
+            <div className="text-xs text-ink-dim">or click to browse, PDF, DOCX, DOC, or TXT, up to 12MB</div>
           </>
         )}
       </div>
+
+      {rejected && (
+        <div className="mt-4 flex items-center gap-2 text-sm text-signal-rose">
+          <AlertCircle className="h-4 w-4" /> That file type isn't supported. Try PDF, DOCX, DOC, or TXT.
+        </div>
+      )}
 
       {error && (
         <div className="mt-4 flex items-center gap-2 text-sm text-signal-rose">

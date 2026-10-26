@@ -1,20 +1,64 @@
+import path from "node:path";
 import { Router } from "express";
 import multer from "multer";
+import mammoth from "mammoth";
+import WordExtractor from "word-extractor";
 import { generateStructured, MODELS, textPart, pdfPart } from "../gemini.js";
 import { PROFILE_SCHEMA } from "../schemas.js";
+
+// Browsers are inconsistent about what mimetype they report for .doc and
+// .txt (some send application/octet-stream for anything they don't
+// recognize), so the extension is the reliable signal and the mimetype is
+// just a second opinion when it happens to be useful.
+const ACCEPTED_EXTENSIONS = new Set([".pdf", ".docx", ".doc", ".txt"]);
 
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 12 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
-    if (file.mimetype !== "application/pdf") {
-      return cb(new Error("Only PDF resumes are supported right now."));
+    const ext = path.extname(file.originalname || "").toLowerCase();
+    if (!ACCEPTED_EXTENSIONS.has(ext)) {
+      return cb(new Error("Resumes can be PDF, DOCX, DOC, or TXT right now."));
     }
     cb(null, true);
   },
 });
 
 const router = Router();
+
+/**
+ * Turns the uploaded file into Gemini `parts`. PDFs go in as inline binary
+ * data since Gemini reads those natively and does better with the original
+ * layout. Everything else gets its text pulled out here first, since Gemini
+ * has no native reader for .docx/.doc and a plain .txt needs no extraction
+ * at all.
+ */
+async function extractParts(file) {
+  const ext = path.extname(file.originalname || "").toLowerCase();
+
+  if (ext === ".pdf") {
+    return [pdfPart(file.buffer.toString("base64"))];
+  }
+
+  if (ext === ".docx") {
+    const { value: text } = await mammoth.extractRawText({ buffer: file.buffer });
+    if (!text.trim()) throw new Error("Could not find any text in that DOCX file.");
+    return [textPart(`Resume text, extracted from a DOCX file:\n\n${text}`)];
+  }
+
+  if (ext === ".doc") {
+    const extractor = new WordExtractor();
+    const doc = await extractor.extract(file.buffer);
+    const text = doc.getBody();
+    if (!text.trim()) throw new Error("Could not find any text in that DOC file.");
+    return [textPart(`Resume text, extracted from a DOC file:\n\n${text}`)];
+  }
+
+  // .txt, and anything else that slipped past the filter
+  const text = file.buffer.toString("utf-8");
+  if (!text.trim()) throw new Error("That file looked empty.");
+  return [textPart(`Resume text:\n\n${text}`)];
+}
 
 const SYSTEM = `You are a principal career architect at Career Nexus. You read a resume
 carefully, including skills implied by project or work descriptions and not
@@ -35,7 +79,12 @@ router.post("/", upload.single("resume"), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: "No resume file uploaded." });
 
-    const base64 = req.file.buffer.toString("base64");
+    let fileParts;
+    try {
+      fileParts = await extractParts(req.file);
+    } catch (err) {
+      return res.status(400).json({ error: err.message || "Could not read that file." });
+    }
 
     const { data } = await generateStructured({
       model: MODELS.REASONING,
@@ -44,10 +93,10 @@ router.post("/", upload.single("resume"), async (req, res) => {
       thinking: "HIGH",
       parts: [
         textPart(
-          "Parse the attached resume PDF into the structured profile schema, including " +
+          "Parse the attached resume into the structured profile schema, including " +
             "the ATS compatibility read."
         ),
-        pdfPart(base64),
+        ...fileParts,
       ],
     });
 
