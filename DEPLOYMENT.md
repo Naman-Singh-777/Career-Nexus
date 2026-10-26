@@ -8,18 +8,17 @@ Pages is on, source is set to GitHub Actions, and the site is live at:
 
 **https://naman-singh-777.github.io/Career-Nexus/**
 
-The workflow in `.github/workflows/deploy-pages.yml` runs on every push to `main` and builds `client/` with Vite. Right now the page loads and looks right, but it is calling an API that does not exist yet, so anything past the hero screen will fail until step 2 is done.
+The workflow in `.github/workflows/deploy-pages.yml` runs on every push to `main` and builds `client/` with Vite.
 
-## 2. Deploy the backend to Render
+## 2. Backend on Render, deployed, one step left
 
-This one still needs your own Render login, so it is the only step left.
+The `career-nexus-api` web service exists on Render now, connected to this repo, auto-deploying on push to `main`:
 
-1. Go to [render.com](https://render.com) and sign in with GitHub.
-2. **New, Blueprint**, pick this repo. Render reads `render.yaml` at the root and proposes one web service, `career-nexus-api`.
-3. It will ask for `GEMINI_API_KEY`. Paste your key from [aistudio.google.com/apikey](https://aistudio.google.com/apikey). This is the only place the key lives: Render's environment, never in the repo, never shipped to the browser.
-4. Deploy. Render gives the service a URL, something like `https://career-nexus-api.onrender.com`.
-5. Back in the repo: **Settings, Secrets and variables, Actions, Variables, New repository variable**. Name it `VITE_API_BASE_URL`, value is that Render URL, no trailing slash.
-6. Push anything to `main` (or re-run the Pages workflow from the Actions tab) so the frontend rebuilds pointing at the live backend.
+**https://career-nexus-api-hcfs.onrender.com**
+
+`GEMINI_MODEL_REASONING`, `GEMINI_MODEL_FAST`, and `ALLOWED_ORIGIN` are already set on it. `VITE_API_BASE_URL` is also already set in the repo's Actions variables and the Pages site has rebuilt against it, so the frontend is pointed at this backend.
+
+The one thing left, and the only step that has to happen from your own accounts: open the service in the [Render dashboard](https://dashboard.render.com/web/srv-dbfb0m8m7kps738do320), go to **Environment**, and add `GEMINI_API_KEY` with your key from [aistudio.google.com/apikey](https://aistudio.google.com/apikey). Render redeploys automatically once you save it. This is the only place the key lives: Render's environment, never in the repo, never shipped to the browser.
 
 After that, every push to `main` redeploys both sides on its own.
 
