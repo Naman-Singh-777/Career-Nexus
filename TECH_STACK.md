@@ -54,7 +54,7 @@ The app can run in production two different ways, and the code supports both wit
 
 - **Single process** (`npm start`): Express builds and serves the React app itself, API and frontend on one origin, one port. This is what running it locally in production mode does.
 - **Split hosting** (the live deployment): the frontend and backend deploy separately, each redeploying on push to `main`.
-  - The frontend builds with Vite and deploys to **GitHub Pages** through a GitHub Actions workflow (`.github/workflows/deploy-pages.yml`). Two build-time variables control this: `VITE_BASE_PATH`, so asset URLs resolve under a project-site path like `/Career-Nexus/`, and `VITE_API_BASE_URL`, so `client/src/api.js` calls the Render URL instead of a relative path. Neither is set for a normal local build, so nothing changes there.
+  - The frontend builds with Vite and deploys to **GitHub Pages** through a GitHub Actions workflow (`.github/workflows/deploy-pages.yml`), live at `https://naman-singh-777.github.io/Career-Nexus/`. Two build-time variables control this: `VITE_BASE_PATH`, so asset URLs resolve under a project-site path like `/Career-Nexus/`, and `VITE_API_BASE_URL`, so `client/src/api.js` calls the Render URL instead of a relative path. Neither is set for a normal local build, so nothing changes there.
   - The backend deploys to **Render** as its own web service, defined in `render.yaml` at the repo root so Render can build it straight from the repo without manual setup. `GEMINI_API_KEY` lives only in Render's environment, never in git.
   - `ALLOWED_ORIGIN` on the server restricts CORS to the GitHub Pages origin once it is set; unset, the API stays open to any origin, which is what local dev needs.
 

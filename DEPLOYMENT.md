@@ -2,15 +2,17 @@
 
 The frontend and backend deploy separately, straight from this repo on every push to `main`, the same push-to-deploy practice as a GitHub Pages portfolio site. The frontend is static, so it goes on GitHub Pages. The backend holds the Gemini key, so it needs an actual server, which goes on Render's free tier, also wired to this repo.
 
-Both pieces are already set up in code. Two one-time clicks are left, neither of which I can do from here since they need your own GitHub and Render logins.
+## 1. GitHub Pages, done
 
-## 1. Turn on GitHub Pages
+Pages is on, source is set to GitHub Actions, and the site is live at:
 
-In the repo on github.com: **Settings, Pages, Build and deployment, Source**, set it to **GitHub Actions**. That's the whole step. The workflow in `.github/workflows/deploy-pages.yml` already runs on every push to `main` and builds `client/` with Vite.
+**https://naman-singh-777.github.io/Career-Nexus/**
 
-Once that's on, the site will build on the next push, but it will be calling an API that doesn't exist yet, so do step 2 first if you want it working right away rather than just deployed.
+The workflow in `.github/workflows/deploy-pages.yml` runs on every push to `main` and builds `client/` with Vite. Right now the page loads and looks right, but it is calling an API that does not exist yet, so anything past the hero screen will fail until step 2 is done.
 
 ## 2. Deploy the backend to Render
+
+This one still needs your own Render login, so it is the only step left.
 
 1. Go to [render.com](https://render.com) and sign in with GitHub.
 2. **New, Blueprint**, pick this repo. Render reads `render.yaml` at the root and proposes one web service, `career-nexus-api`.
